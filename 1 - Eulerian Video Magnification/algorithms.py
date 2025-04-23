@@ -7,21 +7,10 @@ from utils import *
 # ------------------ Upsampling/Downsampling -----------------------------------
 
 # +
-def application_noyau(part, kernel):
-    n = len(part)
-    somme = 0
-    for u in range(n):
-        for k in range(n):
-            somme += part[u, k]*kernel[u, k]
-    return somme
-           
 
-def apply_filter(image, kernel):
+def apply_filter(image):
     x, y, _ = image.shape
-    N = len(kernel)
-
-    diago = int(N/2) 
-
+    
     imint = np.zeros((x+4,y+4,_))
     imint[2:x+2,2:y+2,:]=image[:,:,:]
     image_filtre=np.zeros(imint.shape, dtype=np.float64)
@@ -38,40 +27,26 @@ def apply_filter(image, kernel):
 
 def downsample(image, kernel):
 
-    """
-    Downsample the image 
     
-    A Gaussian filter is applied to the image, which is then downsampled by
-    a factor 2
-    
-    Parameters
-    ----------
-    
-    image: array-like
-      original image
-    kernel: array-like
-      kernel of the filter
-      
-    Return
-    ------
-    
-    out: array-like
-      dowsampled image
-    """
     x, y, _ = image.shape
-    N = len(kernel)
+    
     
 
     #On applique le filtre gaussien
-    image_filtre = apply_filter(image, kernel)
+    image_filtre = apply_filter(image)
     
 
     #On réduit la taille de l'image en sous-échantillonant
+
+    #on dissocie le cas d'une taille impaire en rajoutant une ligne ou colonne de zéro
     if x%2 == 1:
         image = np.concatenate([image, np.zeros((1, y, 3))])
     elif y%2 == 1:
         for i in range(x):
             image[i] = np.concatenate([image[i], np.array([0, 0, 0])])
+
+
+    #on crée un tableau de zéros de tailles 2 fois plus petites, puis on ajoute une valeure sur 2
 
     x_new, y_new, _ = image.shape
     taille_x, taille_y = int(x_new/2), int(y_new/2)
@@ -79,12 +54,14 @@ def downsample(image, kernel):
     for i in range (taille_x):
         for j in range(taille_y):
             image_downsample[i, j] = image_filtre[2*i, 2*j]
-        
+
+
+    #pour éviter les problèmes de tailles impaires etc, l'idéal aurait été d'avoir une liste vide et d'append un élément sur 2
     return image_downsample
                     
     
     
-# -
+# +
 def upsample(image, kernel, dst_shape=None):
 
     """
@@ -122,13 +99,11 @@ def upsample(image, kernel, dst_shape=None):
     
 
     #On applique maintenant le filtre gaussien
-    image_finale = apply_filter(image_upsample, kernel)
+    image_finale = apply_filter(image_upsample)
     return image_finale
     
-    # A CODER
-
-
-
+    
+# -
 
 # ------------------ Gaussian pyramid -----------------------------------------
 
@@ -161,8 +136,7 @@ def generateGaussianPyramid(image, kernel, level):
 
 # ------------------------- Temporal filter -----------------------------------
 
-
-
+# +
 def apply_temporal_filter(images, fps, freq_range):
 
     """
@@ -209,7 +183,8 @@ def apply_temporal_filter(images, fps, freq_range):
             
     
 
-    # A CODER
+    
+# -
 
 
 

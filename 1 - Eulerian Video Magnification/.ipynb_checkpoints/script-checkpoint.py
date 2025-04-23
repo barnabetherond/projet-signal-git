@@ -86,26 +86,28 @@ def gaussian_evm(images, fps, level, alpha, freq_range):
     x, y, t, p = images.shape
     pyramid = []
     for ith_frame in range(t):
-        pyramid.append(generateGaussianPyramid(images[:,:,ith_frame, :], gaussian_kernel, level))
+        pyramid.append(generateGaussianPyramid(images[:,:,ith_frame, :], gaussian_kernel, level))  #Pour chaque frame de la video, on calcule son image de pyramide de Gausse basse résolution
     pyramid = np.array(pyramid)
+    #Au vu de comment on a procédé avec la liste pyramid, ici le "temps" est la première dimension, on modifie donc cela pour qu'on se place dans le cadre du sujet     
     pyramid = np.transpose(pyramid, (1, 2, 0, 3))
+    
                     
     # Filter the pyramid  
+    #On filtre maintenant notre "video basse résolution" à l'aide de la fonction de la q1
+    filtered_images_basse_resolution = alpha * apply_temporal_filter(pyramid, fps, freq_range)
+
+    #On remonte maintenant la pyramide
+
     
-    filtered_images_1 = alpha * apply_temporal_filter(pyramid, fps, freq_range)
     filtered_images = []
-    
-    #on reconstruit la vidéo
     for ith_frame in range(t):
-        u = filtered_images_1[:, :, ith_frame, :]
+        u = filtered_images_basse_resolution[:, :, ith_frame, :]
         for i in range(level):
             u = upsample(u, gaussian_kernel)
         filtered_images.append(u)
     
     filtered_images = np.array(filtered_images)
     filtered_images = np.transpose(filtered_images, (1, 2, 0, 3))
-
-    print(filtered_images.shape)
         
 
     # Video reconstruction   
@@ -118,50 +120,3 @@ def gaussian_evm(images, fps, level, alpha, freq_range):
         output_video[i] = np.clip(reconstructed_image, 0, 255)
              
     return output_video
-
-
-
-if __name__ == "__main__":
-   
-    # Load video
-    video_path = './video/face.mp4'
-    images, fps = load_video(video_path=video_path)
-    
-    
-    # Parameters
-    level = 2
-    alpha = 50
-    low_omega = 0 # A MODIFIER
-    high_omega = 1e6 # A MODIFIER
-    freq_range = (low_omega, high_omega)
-    #filtered_image = apply_temporal_filter(images, fps, freq_range)
-    # Motion amplification
-    #processed_video = evm(images, fps, level, alpha, freq_range)
-    processed_video = gaussian_evm(images, fps, level, alpha, freq_range)
-    
-    # Save video
-    saving_path = './results/processed_q4.mp4'
-    save_video(video=processed_video, saving_path=saving_path, fps=fps)
-
-
-if __name__ == "__main__":
-    video_path = './video/face.mp4'
-    images, fps = load_video(video_path=video_path)
-
-
-if __name__ == "__main__":
-   
-    # Load video
-    video_path = './video/face.mp4'
-    images, fps = load_video(video_path=video_path)
-    image = images[:, :, 0]
-
-    saving_path = '/results/gaussienne_downsample.jpg'
-    save_image(image=downsample(image, gaussian_kernel), saving_path=saving_path)
-
-
-
-
-
-
-
