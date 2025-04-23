@@ -14,40 +14,28 @@ def application_noyau(part, kernel):
         for k in range(n):
             somme += part[u, k]*kernel[u, k]
     return somme
-            
+           
+
 def apply_filter(image, kernel):
     x, y, _ = image.shape
     N = len(kernel)
 
     diago = int(N/2) 
 
-    image_filtre = np.zeros_like(image)
+    imint = np.zeros((x+4,y+4,_))
+    imint[2:x+2,2:y+2,:]=image[:,:,:]
+    image_filtre=np.zeros(imint.shape, dtype=np.float64)
+    image_filtre[2:x+2,2:y+2,:]=(1/256)*(imint[0:x,0:y,:]+imint[4:x+4,4:y+4,:]+imint[0:x,4:y+4,:]+imint[4:x+4,0:y,:]+
+                                         4*(imint[0:x,1:y+1,:]+imint[0:x,3:y+3,:]+imint[1:x+1,0:y,:]+imint[1:x+1,4:y+4,:]+imint[3:x+3,0:y,:]+imint[3:x+3,4:y+4,:]+imint[4:x+4,1:y+1,:]+imint[4:x+4,3:y+3,:])+
+                                         6*(imint[0:x,2:y+2,:]+imint[4:x+4,2:y+2,:]+imint[2:x+2,0:y,:]+imint[2:x+2,4:y+4,:])+
+                                         16*(imint[1:x+1,1:y+1,:]+imint[1:x+1,3:y+3,:]+imint[3:x+3,1:y+1,:]+imint[3:x+3,3:y+3,:])+
+                                         24*(imint[1:x+1,2:y+2,:]+imint[3:x+3,2:y+2,:]+imint[2:x+2,1:y+1,:]+imint[2:x+2,3:y+3,:])+
+                                         36*imint[2:x+2,2:y+2,:])
+    imagef=np.zeros(image.shape, dtype=np.float64)
+    imagef[:,:,:]=image_filtre[2:x+2,2:y+2,:]
+    return imagef
 
-    for i in range(x):
-        for j in range(y):
-            part = np.zeros((N, N, 3))
-            if i == 0 and j == 0:
-                part[diago:N, diago:N] = image[diago:N, diago:N]
-            elif i == 0 and j == y-diago:
-                part[diago:N, 0:diago] = image[diago:N, 0:diago]
-            elif i == x-diago and j == 0:
-                part[0:diago, diago:N] = image[0:diago, N:diago]
-            elif i == x-diago and j == y-diago:
-                part[0:diago, 0:diago] = image[0:diago, 0:diago]
-            elif i == 0:
-                part[diago:N, :] = image[diago:N, :]
-            elif i == x-diago:
-                part[0:diago, :] = image[0:diago, :]
-            elif j == 0:
-                part[:, diago:N] = image[:, diago:N]
-            elif j == y-diago:
-                part[:, 0:diago] = image[:, 0:diago]
-            else:
-                part = image[i-diago:i+diago, j-diago:j+diago, :]
-            
-            image_filtre[i, j] = application_noyau(part, kernel)
-    return image_filtre
-    
+
 def downsample(image, kernel):
 
     """
@@ -76,13 +64,21 @@ def downsample(image, kernel):
 
     #On applique le filtre gaussien
     image_filtre = apply_filter(image, kernel)
+    
 
     #On réduit la taille de l'image en sous-échantillonant
-    taille_downsample = int(x/2)
-    image_downsample = np.zeros((taille_downsample, taille_downsample))
-    for i in range (taille_downsample):
-        for j in range(taille_downsample):
-            image_down_sample[i, j] = image_filtre[2*i, 2*j]
+    if x%2 == 1:
+        image = np.concatenate([image, np.zeros((1, y, 3))])
+    elif y%2 == 1:
+        for i in range(x):
+            image[i] = np.concatenate([image[i], np.array([0, 0, 0])])
+
+    x_new, y_new, _ = image.shape
+    taille_x, taille_y = int(x_new/2), int(y_new/2)
+    image_downsample = np.zeros((taille_x, taille_y, 3))
+    for i in range (taille_x):
+        for j in range(taille_y):
+            image_downsample[i, j] = image_filtre[2*i, 2*j]
         
     return image_downsample
                     
@@ -116,11 +112,11 @@ def upsample(image, kernel, dst_shape=None):
       output image
     """
     #On upsample d'abord l'image
-    N = len(image)
-    taille_upsample = int(2*N)
-    image_upsample = np.zeros_like(image)
-    for i in range(taille_upsample):
-        for j in range(taille_upsample):
+    x, y, _ = image.shape
+    x_up, y_up = int(2*x), int(2*y)
+    image_upsample = np.zeros((x_up, y_up, 3))
+    for i in range(x_up):
+        for j in range(y_up):
             if i%2 == 0 and j%2 == 0:
                 image_upsample[i, j] = image[int(i/2), int(j/2)]  
     
@@ -130,6 +126,8 @@ def upsample(image, kernel, dst_shape=None):
     return image_finale
     
     # A CODER
+
+
 
 
 # ------------------ Gaussian pyramid -----------------------------------------
@@ -160,7 +158,6 @@ def generateGaussianPyramid(image, kernel, level):
         image = downsample(image, kernel)
     return image
 
-    # A CODER
 
 # ------------------------- Temporal filter -----------------------------------
 
